@@ -1,21 +1,19 @@
 # Xbox Controller Robot Arm Controller
 
-This project provides a Python script to control a robot arm using an Xbox controller. The script maps analog stick inputs to movement commands and uses the right trigger to control the gripper's open/close state. It sends these commands via HTTP POST requests to a robot endpoint.
+This project provides a Python script that lets you control a robot arm using an Xbox controller’s analog sticks and right trigger. The script sends movement commands via HTTP POST requests to a defined robot endpoint.
 
 ## Features
 
 - **Analog Stick Control:**  
   - **Left Stick:**  
-    - Vertical movement controls forward/backward motion (affecting the X-axis).  
-    - Horizontal movement controls left/right motion (affecting the Y-axis).
+    - **Vertical Axis:** Controls forward/backward motion (affects the X-axis).
+    - **Horizontal Axis:** Controls left/right motion (affects the Y-axis).
   - **Right Stick:**  
-    - Vertical movement controls up/down motion (affecting the Z-axis).
+    - **Vertical Axis:** Controls up/down motion (affects the Z-axis).
 - **Gripper Control:**  
-  - The right trigger is used to control the gripper: when pressed beyond a threshold, the gripper closes; otherwise, it remains open.
+  - **Right Trigger:** Adjusts the gripper position continuously based on how hard the trigger is pressed. A fully pressed trigger closes the gripper (0.0), and a released trigger keeps it open (1.0).
 - **User Position Configuration:**  
-  - At startup, the user is prompted to specify whether they are "Behind" or "Facing" the robot. This input adjusts how the left stick's inputs are mapped to movement directions.
-- **HTTP Communication:**  
-  - Movement commands and gripper state changes are sent to the robot using HTTP POST requests.
+  - At startup, you are prompted to enter **1** if you are behind the robot or **2** if you are facing the robot. This setting determines how the left stick inputs are mapped to the X and Y axes.
 
 ## Prerequisites
 
