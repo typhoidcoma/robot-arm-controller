@@ -1,6 +1,32 @@
-# Xbox Controller Robot Arm Controller
+# Robot Arm Controller
 
-This project provides a Python script that lets you control a robot arm using an Xbox controller’s analog sticks and right trigger. The script sends movement commands via HTTP POST requests to a defined robot endpoint.
+This project simulates a robot arm using MuJoCo and Pygame. It reads inputs from an Xbox-Controller and updates the simulated robot's joints in real time.
+
+## Dependencies
+
+- Python 3.x
+- [Pygame](https://www.pygame.org)
+- [MuJoCo](https://mujoco.org)
+- [NumPy](https://numpy.org)
+
+Install dependencies via pip:
+```bash
+pip install pygame mujoco numpy
+```
+
+## Usage
+
+1. Connect an Xbox controller.
+2. Ensure the MuJoCo model file is available at `robots\trs_so_arm100\scene.xml`.
+3. Run the simulation:
+```bash
+python src/utils/simulation_process.py
+```
+
+## Project Structure
+
+- `src/utils/simulation_process.py`: Main simulation loop using Pygame and MuJoCo.
+- Other files and scripts can be added as needed.
 
 ## Features
 
