@@ -1,4 +1,6 @@
-# viewer_process.py
+# Description: Viewer process for Mujoco simulation. This process is responsible for rendering the simulation and
+# updating the model state based on the state queue.
+
 import os
 import sys
 import time

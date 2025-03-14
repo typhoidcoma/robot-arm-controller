@@ -1,3 +1,7 @@
+# Description: This script is used to simulate the robot arm using the MuJoCo physics engine.
+#
+# The simulation_loop function initializes the Pygame joystick and loads the MuJoCo model. It then reads the joystick inputs and updates the target control values based on the input. The control values are clamped between -3.14 and 3.14 and applied to the model. The state of the model is periodically sent to the state_queue for visualization.
+
 import os
 import sys
 import pygame
