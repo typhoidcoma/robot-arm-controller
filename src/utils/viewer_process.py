@@ -8,16 +8,26 @@ import logging
 from multiprocessing import Queue
 
 # ----- Configure Logging -----
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s: %(message)s',
-                    datefmt='%H:%M:%S')
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s: %(message)s',
+    datefmt='%H:%M:%S'
+)
 logger = logging.getLogger("viewer")
 
+
 def viewer_loop(state_queue: Queue):
+    """
+    Main loop for the viewer process. Loads the model and starts the viewer.
+    
+    Args:
+        state_queue (Queue): Queue for receiving state updates.
+    """
     MODEL_XML = "robots\\trs_so_arm100\\scene.xml"
     if not os.path.exists(MODEL_XML):
         logger.error("Model file '%s' not found!", MODEL_XML)
         sys.exit()
+    
     model = mujoco.MjModel.from_xml_path(MODEL_XML)
     data = mujoco.MjData(model)
 
@@ -35,7 +45,17 @@ def viewer_loop(state_queue: Queue):
         logger.error("Error launching viewer: %s", e)
         sys.exit()
 
+
 def run_viewer_loop(viewer, model, data, state_queue: Queue):
+    """
+    Runs the viewer loop, updating the model state from the queue.
+    
+    Args:
+        viewer: The viewer instance.
+        model: The Mujoco model.
+        data: The Mujoco data.
+        state_queue (Queue): Queue for receiving state updates.
+    """
     logger.info("Viewer started. Updating as fast as possible...")
     while viewer.is_running():
         # Drain the queue: apply the latest available state.
@@ -59,7 +79,7 @@ def run_viewer_loop(viewer, model, data, state_queue: Queue):
         # Minimal sleep to yield CPU, adjust or remove as needed.
         time.sleep(0.001)
 
+
 if __name__ == "__main__":
-    from multiprocessing import Queue
     state_queue = Queue()
     viewer_loop(state_queue)

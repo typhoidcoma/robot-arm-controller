@@ -3,6 +3,7 @@ import multiprocessing
 from utils.simulation_process import simulation_loop
 from utils.viewer_process import viewer_loop
 
+
 if __name__ == "__main__":
     # Create a queue to share state between processes
     state_queue = multiprocessing.Queue()

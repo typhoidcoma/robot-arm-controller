@@ -53,9 +53,11 @@ def init_robot() -> None:
     endpoint_init = f"{BASE_URL}move/init"
     endpoint_absolute = f"{BASE_URL}move/absolute"
     try:
+        # Send initialization request
         response = requests.post(endpoint_init, json={}, timeout=5)
         response.raise_for_status()
         time.sleep(2)
+        # Set the robot to an absolute starting position
         response = requests.post(
             endpoint_absolute,
             json={"x": 0, "y": 0, "z": 0, "rx": 1.5, "ry": 0, "rz": 0, "open": 1.0},
