@@ -1,4 +1,4 @@
-# xbox_mujoco_so_arm100.py
+# xbox_mujoco_soarm100.py
 import multiprocessing
 from utils.simulation_process import simulation_loop
 from utils.viewer_process import viewer_loop
