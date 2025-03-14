@@ -20,7 +20,9 @@ pip install pygame mujoco numpy
 2. Ensure the MuJoCo model file is available at `robots\trs_so_arm100\scene.xml`.
 3. Run the simulation:
 ```bash
-python src/utils/simulation_process.py
+python xbox_mujoco_soarm100.py
+# or
+python xbox_controller_phospho_soarm100.py
 ```
 
 ## Project Structure
