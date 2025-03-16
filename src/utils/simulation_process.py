@@ -37,7 +37,6 @@ def simulation_loop(state_queue: Queue):
     num_axes = joystick.get_numaxes()
     num_hats = joystick.get_numhats()
     logger.info("Number of joystick axes: %d", num_axes)
-    logger.info("Number of joystick hats: %d", num_hats)
     # Log initial joystick axis and hat values for debugging
     logger.info("Initial axis values: %s", [joystick.get_axis(i) for i in range(num_axes)])
     logger.info("Initial hat values: %s", [joystick.get_hat(i) for i in range(num_hats)])
@@ -55,7 +54,7 @@ def simulation_loop(state_queue: Queue):
     pitch_scale = 0.05     # Left stick vertical controls pitch
     elbow_scale = 0.1      # Right stick vertical controls elbow movement
     wrist_roll_scale = 0.8 # Right stick horizontal controls wrist roll
-    wrist_pitch_scale = 0.1 # D-Pad vertical controls wrist pitch
+    wrist_pitch_scale = 0.1 # A button and B button control wrist pitch
     jaw_scale = 0.2        # Right trigger controls jaw (inverted)
     bumper_scale = 0.05    # Bumpers for adjusting wrist roll
 
