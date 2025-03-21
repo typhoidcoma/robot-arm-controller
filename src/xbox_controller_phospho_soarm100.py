@@ -14,9 +14,9 @@ import logging
 from typing import Literal
 
 # --- Configuration ---
-BASE_URL: str = "http://127.0.0.1:80/"  # Replace with your actual base URL
+BASE_URL: str = "http://192.168.1.8/"  # Replace with your actual base URL
 STEP_SIZE: int = 2                      # Movement step multiplier (cm per unit analog input)
-SLEEP_TIME: float = 0.05                # Loop sleep time (20 Hz)
+SLEEP_TIME: float = 0.00052                # Loop sleep time (20 Hz)
 
 # Global gripper state (float: 1.0 means fully open, 0.0 means fully closed)
 open_state: float = 1.0
@@ -60,7 +60,7 @@ def init_robot() -> None:
         # Set the robot to an absolute starting position
         response = requests.post(
             endpoint_absolute,
-            json={"x": 0, "y": 0, "z": 0, "rx": 1.5, "ry": 0, "rz": 0, "open": 1.0},
+            json={"x": 0.00, "y": 0.00, "z": 0.00, "rx": 1.50, "ry": 0.00, "rz": 0.00, "open": 1.00},
             timeout=5,
         )
         response.raise_for_status()
@@ -142,9 +142,9 @@ def control_robot():
                     "x": delta_x,
                     "y": delta_y,
                     "z": delta_z,
-                    "rx": 0,
-                    "ry": 0,
-                    "rz": 0,
+                    "rx": 0.00,
+                    "ry": 0.00,
+                    "rz": 0.00,
                     "open": open_state,
                 }
                 try:
