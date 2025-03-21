@@ -1,66 +1,63 @@
+#!/usr/bin/env python3
+
 """
-This script lets you control your robot using an Xbox controller’s analog sticks and right trigger.
-The robot arm is controlled as follows:
-- Left Stick Vertical:   Move forward/backward (affects X)
-- Left Stick Horizontal: Move left/right (affects Y)
-- Right Stick Vertical:  Move up/down (affects Z)
-- Right Trigger:         Controls gripper continuously (0.0 = closed, 1.0 = open)
+This script lets you control your robot using an Xbox controller.
+The robot arm is controlled using the following controls:
+- Left Stick Up/Down:  Move forward/backward
+- Right Stick Left/Right: Move left/right
+- Right Bumper (RB): Move up (increase Z)
+- Left Bumper (LB): Move down (decrease Z)
+- Right Trigger: Open/Close gripper
 """
 
-import pygame
 import requests
 import time
 import logging
-from typing import Literal
+from typing import cast
+import pygame
+from typing import Dict, Literal, Tuple
 
-# --- Configuration ---
-BASE_URL: str = "http://192.168.1.8/"  # Replace with your actual base URL
-STEP_SIZE: int = 2                      # Movement step multiplier (cm per unit analog input)
-SLEEP_TIME: float = 0.00052                # Loop sleep time (20 Hz)
 
-# Global gripper state (float: 1.0 means fully open, 0.0 means fully closed)
-open_state: float = 1.0
+# Configuration
+BASE_URL: str = "http://192.168.1.8:80/"
+STEP_SIZE: int = 5.0  # Movement step in centimeters
+SLEEP_TIME: float = 0.005  # Loop sleep time (20 Hz)
+DEADZONE: float = 0.15  # Joystick deadzone to prevent drift
 
-# Axis indices (adjust if necessary for your controller)
-LEFT_STICK_HORIZONTAL_AXIS = 0
-LEFT_STICK_VERTICAL_AXIS = 1
-RIGHT_STICK_VERTICAL_AXIS = 3  # Change this if your controller uses a different index.
-RIGHT_TRIGGER_AXIS = 5
+# Global open state (initially 1 as set in init_robot)
+open_state: Literal[0, 1] = 1
 
-# Ask user about relative position using numeric input.
+
 def behind_or_front() -> Literal["Behind", "Facing"]:
+    """
+    Returns the relative position of the user to the robot.
+    """
     while True:
-        inp = input("Enter 1 if you are behind your robot or 2 if you are facing your robot: ")
-        if inp == "1":
-            print("You chose 'Behind'")
-            return "Behind"
-        elif inp == "2":
-            print("You chose 'Facing'")
-            return "Facing"
+        inp = input(
+            "Type 'Behind' if you are behind your robot or 'Facing' if you are facing your robot: "
+        )
+        if inp in ["Behind", "Facing"]:
+            print(f"You chose '{inp}'")
+            inp = cast(Literal["Behind", "Facing"], inp)
+            return inp
         else:
-            print("Invalid input. Please enter 1 for Behind or 2 for Facing.")
+            print("You must choose between 'Behind' or 'Facing'")
+
 
 user_position: Literal["Behind", "Facing"] = behind_or_front()
 
-# Deadzone threshold for analog sticks (to filter noise)
-DEADZONE = 0.15
-
-# Tolerance for detecting a significant change in the gripper value
-GRIPPER_TOLERANCE = 0.05
 
 def init_robot() -> None:
     """Initialize the robot by calling /move/init and setting an absolute starting position."""
     endpoint_init = f"{BASE_URL}move/init"
     endpoint_absolute = f"{BASE_URL}move/absolute"
     try:
-        # Send initialization request
         response = requests.post(endpoint_init, json={}, timeout=5)
         response.raise_for_status()
         time.sleep(2)
-        # Set the robot to an absolute starting position
         response = requests.post(
             endpoint_absolute,
-            json={"x": 0.00, "y": 0.00, "z": 0.00, "rx": 1.50, "ry": 0.00, "rz": 0.00, "open": 1.00},
+            json={"x": 0, "y": 0, "z": 0, "rx": 1.5, "ry": 0, "rz": 0, "open": 1},
             timeout=5,
         )
         response.raise_for_status()
@@ -69,103 +66,133 @@ def init_robot() -> None:
         logging.error(f"Failed to initialize robot: {e}")
     time.sleep(1)  # Allow time for the robot to initialize
 
+
+def apply_deadzone(value: float, deadzone: float) -> float:
+    """Apply deadzone to controller input to prevent drift."""
+    if abs(value) < deadzone:
+        return 0.0
+    # Normalize the value considering the deadzone
+    sign = 1 if value > 0 else -1
+    return sign * (abs(value) - deadzone) / (1 - deadzone)
+
+
 def control_robot():
-    """Control the robot using Xbox controller analog stick and trigger inputs with /move/relative."""
+    """Control the robot with Xbox controller inputs using /move/relative."""
     endpoint = f"{BASE_URL}move/relative"
 
-    logging.info("Control the robot using the Xbox controller:")
-    logging.info("  Left Stick Vertical:   Move forward/backward (affects X)")
-    logging.info("  Left Stick Horizontal: Move left/right (affects Y)")
-    logging.info("  Right Stick Vertical:  Move up/down (affects Z)")
-    logging.info("  Right Trigger:         Controls gripper continuously (0.0 = closed, 1.0 = open)")
-    logging.info("Press Ctrl+C to exit")
-
-    # Initialize Pygame and the joystick module.
+    # Initialize pygame and joystick
     pygame.init()
     pygame.joystick.init()
-
+    
+    # Check if any joysticks/controllers are connected
     if pygame.joystick.get_count() == 0:
-        logging.error("No joystick detected. Please connect an Xbox controller and try again.")
-        pygame.quit()
+        logging.error("No joysticks found. Please connect an Xbox controller.")
         return
+    
+    # Initialize the first joystick
+    controller = pygame.joystick.Joystick(0)
+    controller.init()
+    logging.info(f"Connected to controller: {controller.get_name()}")
 
-    joystick = pygame.joystick.Joystick(0)
-    joystick.init()
-    logging.info(f"Initialized controller: {joystick.get_name()}")
+    logging.info("Control the end effector using the Xbox controller:")
+    logging.info("  Left Stick Up/Down:  Move forward/backward")
+    logging.info("  Right Stick Left/Right: Move left/right")
+    logging.info("  Right Bumper (RB): Move up (increase Z)")
+    logging.info("  Left Bumper (LB): Move down (decrease Z)")
+    logging.info("  Right Trigger: Open/Close gripper")
+    logging.info("Press Ctrl+C to exit")
 
+    # Track trigger state for toggling
+    trigger_pressed = False
     global open_state
-    previous_gripper_value = open_state  # used for detecting significant changes
+
+    # Button mappings - may vary slightly between controllers
+    RIGHT_BUMPER = 5  # RB - Right Bumper
+    LEFT_BUMPER = 4   # LB - Left Bumper
 
     try:
         while True:
-            # Pump the event queue to update joystick state.
-            for event in pygame.event.get():
-                pass
-
-            # --- Read analog stick inputs ---
-            left_horizontal = joystick.get_axis(LEFT_STICK_HORIZONTAL_AXIS)
-            left_vertical = joystick.get_axis(LEFT_STICK_VERTICAL_AXIS)
-            right_vertical = joystick.get_axis(RIGHT_STICK_VERTICAL_AXIS)
-
-            # Apply deadzone filtering.
-            left_horizontal = 0 if abs(left_horizontal) < DEADZONE else left_horizontal
-            left_vertical = 0 if abs(left_vertical) < DEADZONE else left_vertical
-            right_vertical = 0 if abs(right_vertical) < DEADZONE else right_vertical
-
-            # --- Compute movement deltas ---
-            # Mapping changes based on user position.
-            if user_position == "Behind":
-                delta_x = -left_vertical * STEP_SIZE
-                delta_y = -left_horizontal * STEP_SIZE
-            else:
-                delta_x = left_vertical * STEP_SIZE
-                delta_y = left_horizontal * STEP_SIZE
-
-            # Right stick vertical controls Z (up/down). Pushing up (negative value) yields positive Z.
-            delta_z = -right_vertical * STEP_SIZE
-
-            # --- Read right trigger for gripper control ---
-            raw_trigger = joystick.get_axis(RIGHT_TRIGGER_AXIS)
-            # Normalize trigger value to range 0 (released) to 1 (fully pressed).
-            normalized_trigger = (raw_trigger + 1) / 2
-            # Compute gripper value: 1.0 (open) when not pressed, 0.0 (closed) when fully pressed.
-            new_gripper_value = 1.0 - normalized_trigger
-
-            # Check if the change is significant.
-            send_gripper_command = abs(new_gripper_value - previous_gripper_value) > GRIPPER_TOLERANCE
-            previous_gripper_value = new_gripper_value
-            open_state = new_gripper_value
-
-            # --- Send movement command if any movement is detected or gripper state changes significantly ---
-            if abs(delta_x) > 0 or abs(delta_y) > 0 or abs(delta_z) > 0 or send_gripper_command:
+            # Process pygame events
+            pygame.event.pump()
+            
+            # Get joystick inputs with deadzone compensation
+            # Invert Y axis as pygame has negative values for up
+            left_stick_y = -apply_deadzone(controller.get_axis(1), DEADZONE)
+            right_stick_x = apply_deadzone(controller.get_axis(2), DEADZONE)
+            right_trigger = (controller.get_axis(5) + 1) / 2  # Normalize from [-1,1] to [0,1]
+            
+            # Get bumper states for Z-axis movement
+            right_bumper_pressed = controller.get_button(RIGHT_BUMPER)  # A key equivalent
+            left_bumper_pressed = controller.get_button(LEFT_BUMPER)    # D key equivalent
+            
+            # Adjust for user position (Behind/Facing)
+            if user_position == "Facing":
+                left_stick_y = -left_stick_y
+                right_stick_x = -right_stick_x
+            
+            # Calculate movement based on stick positions
+            delta_x = left_stick_y * STEP_SIZE  # Forward/backward with left stick
+            delta_y = right_stick_x * STEP_SIZE  # Left/right with right stick
+            
+            # Calculate Z-axis movement based on bumper buttons
+            delta_z = 0
+            if right_bumper_pressed:
+                delta_z += STEP_SIZE  # Move up (increase Z) with right bumper
+            if left_bumper_pressed:
+                delta_z -= STEP_SIZE  # Move down (decrease Z) with left bumper
+            
+            # Check right trigger for gripper control
+            if right_trigger > 0.7 and not trigger_pressed:
+                # Toggle gripper state
+                open_state = 0 if open_state == 1 else 1
+                data = {
+                    "x": 0, "y": 0, "z": 0, 
+                    "rx": 0, "ry": 0, "rz": 0, 
+                    "open": open_state
+                }
+                try:
+                    response = requests.post(f"{BASE_URL}move/relative", json=data, timeout=1)
+                    response.raise_for_status()
+                    logging.info(f"Toggled gripper to {'open' if open_state == 1 else 'closed'}")
+                except requests.exceptions.RequestException as e:
+                    logging.error(f"Failed to toggle gripper: {e}")
+            
+            trigger_pressed = right_trigger > 0.7
+            
+            # Send movement command if joystick is being used
+            if abs(delta_x) > 0.01 or abs(delta_y) > 0.01 or abs(delta_z) > 0.01:
                 data = {
                     "x": delta_x,
                     "y": delta_y,
                     "z": delta_z,
-                    "rx": 0.00,
-                    "ry": 0.00,
-                    "rz": 0.00,
+                    "rx": 0,
+                    "ry": 0,
+                    "rz": 0,
                     "open": open_state,
                 }
                 try:
                     response = requests.post(endpoint, json=data, timeout=1)
                     response.raise_for_status()
-                    logging.info(
-                        f"Sent movement: x={delta_x:.2f}, y={delta_y:.2f}, z={delta_z:.2f}, open={open_state:.2f}"
-                    )
+                    logging.info(f"Sent movement: x={delta_x:.2f}, y={delta_y:.2f}, z={delta_z:.2f}")
                 except requests.exceptions.RequestException as e:
-                    logging.error(f"Failed to send movement command: {e}")
-
+                    logging.error(f"Request failed: {e}")
+            
             time.sleep(SLEEP_TIME)
     except KeyboardInterrupt:
-        logging.info("Exiting control loop...")
+        logging.info("Exiting...")
     finally:
         pygame.quit()
 
+
 def main():
-    logging.basicConfig(level=logging.INFO)
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
     init_robot()
     control_robot()
+
 
 if __name__ == "__main__":
     main()
