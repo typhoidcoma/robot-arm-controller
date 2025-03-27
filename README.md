@@ -1,6 +1,7 @@
 <!-- Project title -->
 # Robot Arm Controller
 
+![Robot Arm](images/logo.png)
 <!-- Project description -->
 This project simulates a robot arm using MuJoCo and Pygame. It reads inputs from an Xbox-Controller and updates the simulated robot's joints in real time.
 
